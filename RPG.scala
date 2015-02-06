@@ -40,6 +40,8 @@ class RPG {
                     (Math.random()*4).toInt
                     )
                 }
+            if(Enemy.isDefending) Enemy.isDefending = false
+            if(Hero.isDefending) Hero.isDefending = false
             if(Enemy.HP>0 && Hero.HP>0) Turn() 
         }
     }
@@ -54,7 +56,7 @@ class RPG {
         var speed = Settings.getOrElse("speed", 40)
         var isDefending = false
         
-        def attackedBy(Enemy:Fighter):(Int, String) = {
+        def attackedBy(Enemy:Fighter):(Int, Boolean) = {
             val Me = this
             val C = if(Enemy.isDefending) 0.7 else 1.0
             val isCritical = Math.random() > 0.4
@@ -74,7 +76,7 @@ class RPG {
                     println(Enemy.name + "に" + damage + "のダメージ！")
                     Enemy.HP -= damage
                 case 2: Me.isDefending = true
-                case 3: Enemy.HP = Enemy.magickedBy(Me)
+                case 3: Enemy.HP -= Enemy.magickedBy(Me)
                 case 4: if(Me.succeedRun) Finish
                 case _: 
             }
