@@ -2,7 +2,7 @@ package test.rpg.battle
 
 import java.lang.Class
 
-class RPG {
+object RPG {
     def main(args: Array[String]){
         var Enemy = new Monster("スライム", Map(
             "HP" -> 80,
@@ -16,7 +16,7 @@ class RPG {
         var Hero = new Ally("勇者", Map(
             "HP" -> 130,
             "MP" -> 60,
-            "attack" -> 54,
+            "attack" -> 44,
             "defence" -> 48, 
             "magic" -> 36,
             "speed" -> 44
@@ -35,27 +35,48 @@ class RPG {
         ┃ """+ Enemy.name + """が現れた！       ┃
         ┗━━━━━━━━━━━━━━━━━━━━━━━━━━┛
         """)
+        println("""
+        ┏━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+        ┃ Slime: """+ Enemy.HP + """   Hero: """+ Hero.HP + """     ┃
+        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+        """)
         Turn()
         
         def Turn() {
             if(Enemy.speed > Hero.speed) {
-                Enemy.act(
-                    (Math.random()*4).toInt
-                    )
-                println(Hero.name + "はどうする？")
-                println("1.攻撃  2.防御  3.魔法  4.逃げる")
-                Hero.act()
-            }else{
-                println(Hero.name + "はどうする？")
-                println("1.攻撃  2.防御  3.魔法  4.逃げる")
-                Hero.act()
-                Enemy.act(
-                    (Math.random()*4).toInt
-                    )
+                if(Enemy.HP>0){
+                    Enemy.act( (Math.random()*4).toInt, Hero )
+                    if(Hero.HP>0){
+                    println(Hero.name + "はどうする？")
+                    println("┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓")
+                    println("┃ 1.攻撃  2.防御  3.魔法  4.逃げる  ┃")
+                    println("┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛")
+                    Hero.act( (Math.random()*4).toInt, Enemy)
+                    }
                 }
+                
+            }else{
+                if(Hero.HP>0){
+                    println(Hero.name + "はどうする？")
+                    println("┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓")
+                    println("┃ 1.攻撃  2.防御  3.魔法  4.逃げる  ┃")
+                    println("┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛")
+                    Hero.act( (Math.random()*4).toInt, Enemy)
+                    if(Enemy.HP>0){
+                        Enemy.act( (Math.random()*4).toInt, Hero )
+                    }
+                }
+            }
             if(Enemy.isDefending) Enemy.isDefending = false
             if(Hero.isDefending) Hero.isDefending = false
-            if(Enemy.HP>0 && Hero.HP>0) Turn() 
+            if(Enemy.HP>0 && Hero.HP>0){
+                println("""
+        ┏━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+        ┃ Slime: """+ Enemy.HP + """   Hero: """+ Hero.HP + """     ┃
+        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+        """)
+                Turn()
+            }
         }
     }
     
@@ -69,29 +90,42 @@ class RPG {
         var speed = Settings.getOrElse("speed", 40)
         var isDefending = false
         
-        def attackedBy(Enemy:Fighter):(Int, Boolean) = {
+        def attackedBy(Attacker:Fighter):(Int, Boolean) = {
             val Me = this
-            val C = if(Enemy.isDefending) 0.7 else 1.0
+            val C = if(Me.isDefending) 0.5 else 1.0
             val isCritical = Math.random() > 0.9
-            val criticalC = if(isCritical) 2.0 else 1.0
-            val damage = (Me.attack - Enemy.defence/2) * criticalC * C
+            val criticalC = if(isCritical) 2.0 * Ranging else 1.0
+            val damage = (Attacker.attack - Me.defence/2) * criticalC * C * Ranging
             (damage.toInt, isCritical)
+        }
+        
+        def magickedBy(Magicker:Fighter):Int = {
+            val Me = this
+            val C = if(Me.isDefending) 0.5 else 1.0
+            val damage = (Magicker.magic - Me.magic/2) * C * Ranging
+            damage.toInt
         }
         
         def act(n:Int, Enemy:Fighter){
             var Me = this
-            n match{
-                case 1 => 
+            n match{                    
+                case 2 => 
+                    println(Me.name + "は防御している...")
+                    Me.isDefending = true
+                case 3 => 
+                    println(Me.name + "は魔法を唱えた！")
+                    val damage = Enemy.magickedBy(Me).toInt
+                    Me.MP -= 5
+                    println(Enemy.name + "に" + damage + "のダメージ！")
+                    Enemy.HP -= damage
+                //case 4 => if(Me.succeedRun) true
+                case _ => 
                     println(Me.name + "の攻撃！")
                     val damage = Enemy.attackedBy(Me)._1
                     val isCritical = Enemy.attackedBy(Me)._2
                     if(isCritical) println("会心の一撃！")
                     println(Enemy.name + "に" + damage + "のダメージ！")
                     Enemy.HP -= damage
-                case 2 => Me.isDefending = true
-                case 3 =>  Enemy.HP -= Enemy.attackedBy(Me)._1
-                case 4 => if(Me.succeedRun) true
-                case _ => true
             }
             if(Enemy.HP<=0){
                 println(Enemy.name + "は倒れた！")
@@ -110,7 +144,8 @@ class RPG {
         val exp = Settings.getOrElse("exp", 10)    
     }
     
-    class Boss extends Monster {
+    class Boss(Name: String, Settings: Map[String,Int], item:String)
+    extends Monster(Name: String, Settings: Map[String,Int], item:String) {
     
     
     }
@@ -119,5 +154,6 @@ class RPG {
         
     }
     
+    def Ranging:Double = 1 - (Math.random()*0.2 - 0.1)
     
 }
